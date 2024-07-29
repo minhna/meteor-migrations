@@ -5,7 +5,7 @@
   "description": "Tests for meteor-migrations.",
   "main": "migrations_tests.js",
   "scripts": {
-    "test": "spacejam test-packages ./"
+    "test": "meteor test-packages percolate:migrations"
   },
   "repository": {
     "type": "git",
