@@ -205,7 +205,22 @@ Migrations.add({
 });
 ```
 
-For Meteor 2.8+ you can pass async function directly.
+Starting from Meteor 2.8+, you can use async functions directly in your migrations:
+
+```js
+Migrations.add({
+  version: 3,
+  name: 'Add belts to people wearing pants.',
+  up: async function () {
+    // Asynchronous migration code
+    await SomeCollection.updateAsync({ wearsPants: true }, { $set: { hasBelt: true } }, { multi: true });
+  },
+  down: async function () {
+    // Asynchronous rollback code
+    await SomeCollection.updateAsync({}, { $unset: { hasBelt: true } }, { multi: true });
+  },
+});
+```
 
 * Note: You may want to call migration after startup in case your host (such as Heroku) limits the amount of time given for startup
 ``` javascript

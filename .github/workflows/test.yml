@@ -1,5 +1,9 @@
 name: Test
-on: push
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
   test:
@@ -9,6 +13,7 @@ jobs:
         meteorRelease:
           - '--release 2.9.1'
           - '--release 3.0.1'
+          - '--release 3.2.2'
           # Latest recommended version
           - ''
     steps:

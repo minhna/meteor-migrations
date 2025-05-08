@@ -1,201 +1,208 @@
 /* global Tinytest */
-import { Migrations } from './migrations_server'
+import { Migrations } from './migrations_server';
 
-Tinytest.addAsync('Migrates up once and only once.', async function(test) {
-  const run = []; //keeps track of migrations in here
+Tinytest.addAsync('Migrates up once and only once with async up function.', async function (test) {
+  const run = []; // Keeps track of migrations
   await Migrations._reset();
 
-  // first one
+  // First migration with async up function
   Migrations.add({
-    up: function() {
+    up: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate async operation
       run.push('u1');
     },
     version: 1,
   });
 
-  // migrates once
+  // Migrate up
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 
-  // shouldn't do anything
+  // Shouldn't do anything since we're already at the latest version
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 });
 
-Tinytest.addAsync('Migrates up once and back down.', async function(test) {
-  const run = []; //keeps track of migrations in here
+Tinytest.addAsync('Migrates up once and back down with async up and down functions.', async function (test) {
+  const run = []; // Keeps track of migrations
   await Migrations._reset();
 
-  // first one
+  // Migration with async up and down functions
   Migrations.add({
-    up: function() {
+    up: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate async operation
       run.push('u1');
     },
-    down: function() {
+    down: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 100)); // Simulate async operation
       run.push('d1');
     },
     version: 1,
   });
 
+  // Migrate up
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 
-  // shouldn't do anything
+  // Migrate down
   await Migrations.migrateTo('0');
   test.equal(run, ['u1', 'd1']);
   test.equal(await Migrations.getVersion(), 0);
 });
 
-Tinytest.addAsync('Migrates up several times.', async function(test) {
-  const run = []; //keeps track of migrations in here
+Tinytest.addAsync('Migrates up several times with async migrations.', async function (test) {
+  const run = []; // Keeps track of migrations
   await Migrations._reset();
 
-  // first one
+  // First migration
   Migrations.add({
-    up: function() {
+    up: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 50)); // Simulate async operation
       run.push('u1');
     },
     version: 1,
   });
 
-  // migrates once
+  // Migrate up
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 
-  // add two more, out of order
+  // Add two more migrations out of order
   Migrations.add({
-    up: function() {
+    up: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 50));
       run.push('u4');
     },
     version: 4,
   });
   Migrations.add({
-    up: function() {
+    up: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 50));
       run.push('u3');
     },
     version: 3,
   });
 
-  // should run the next two nicely in order
+  // Migrate up to latest
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1', 'u3', 'u4']);
   test.equal(await Migrations.getVersion(), 4);
 });
 
-Tinytest.addAsync('Tests migrating down', async function(test) {
-  const run = []; //keeps track of migrations in here
+Tinytest.addAsync('Tests migrating down with async down function.', async function (test) {
+  const run = []; // Keeps track of migrations
   await Migrations._reset();
 
-  // add the migrations
+  // Add migrations
   Migrations.add({
-    up: function() {
+    up: async function () {
       run.push('u1');
     },
     version: 1,
   });
   Migrations.add({
-    up: function() {
+    up: async function () {
       run.push('u2');
     },
     version: 2,
   });
   Migrations.add({
-    up: function() {
+    up: async function () {
       run.push('u3');
     },
-    down: function() {
+    down: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 50));
       run.push('d3');
     },
     version: 3,
-    name: 'Down Migration', //give it a name, just for shits
+    name: 'Down Migration', // Give it a name
   });
 
-  // migrates up
+  // Migrate up
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1', 'u2', 'u3']);
   test.equal(await Migrations.getVersion(), 3);
 
-  // migrates down
+  // Migrate down to version 2
   await Migrations.migrateTo('2');
   test.equal(run, ['u1', 'u2', 'u3', 'd3']);
   test.equal(await Migrations.getVersion(), 2);
 
-  // should throw as migration u2 has no down method and remain at the save ver
-  await test.throwsAsync(async function() {
+  // Should throw since migration u2 has no down method
+  await test.throwsAsync(async function () {
     await Migrations.migrateTo('1');
   }, /Cannot migrate/);
   test.equal(run, ['u1', 'u2', 'u3', 'd3']);
   test.equal(await Migrations.getVersion(), 2);
 });
 
-Tinytest.addAsync('Tests migrating down to version 0', async function(test) {
-  const run = []; //keeps track of migrations in here
+Tinytest.addAsync('Tests migrating down to version 0 with async down functions.', async function (test) {
+  const run = []; // Keeps track of migrations
   await Migrations._reset();
 
   test.equal(await Migrations.getVersion(), 0);
 
   Migrations.add({
-    up: function() {
+    up: async function () {
       run.push('u1');
     },
-    down: function() {
+    down: async function () {
       run.push('d1');
     },
     version: 1,
   });
 
-  // migrates up
+  // Migrate up
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 
-  // migrates down
+  // Migrate down to version 0
   await Migrations.migrateTo(0);
   test.equal(run, ['u1', 'd1']);
   test.equal(await Migrations.getVersion(), 0);
 });
 
-Tinytest.addAsync('Checks that locking works correctly', async function(test) {
-  const run = []; //keeps track of migrations in here
+Tinytest.addAsync('Checks that locking works correctly with async migrations.', async function (test) {
+  const run = []; // Keeps track of migrations
   await Migrations._reset();
 
-  // add the migrations
+  // Add migration that attempts to start another migration within it
   Migrations.add({
     version: 1,
-    up: async function() {
+    up: async function () {
       run.push('u1');
 
-      // attempts a migration from within the migration, this should have no
-      // effect due to locking
+      // Attempts a migration from within the migration, this should have no effect due to locking
       await Migrations.migrateTo('latest');
     },
   });
 
-  // migrates up, should only migrate once
+  // Migrate up, should only migrate once
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 });
 
-Tinytest.addAsync('Checks that version is updated if subsequent migration fails', async function(test) {
+Tinytest.addAsync('Checks that version is updated if subsequent async migration fails.', async function (test) {
   const run = [];
   let shouldError = true;
   await Migrations._reset();
 
-  // add the migrations
+  // Add migrations
   Migrations.add({
     version: 1,
-    up: function() {
+    up: async function () {
       run.push('u1');
     },
   });
   Migrations.add({
     version: 2,
-    up: function() {
+    up: async function () {
       if (shouldError) {
         throw new Error('Error in migration');
       }
@@ -203,37 +210,37 @@ Tinytest.addAsync('Checks that version is updated if subsequent migration fails'
     },
   });
 
-  // migrate up, which should throw
-  await test.throwsAsync(async function() {
+  // Migrate up, which should throw
+  await test.throwsAsync(async function () {
     await Migrations.migrateTo('latest');
   });
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 
   shouldError = false;
-  // migrate up again, should succeed
+  // Migrate up again, should succeed
   await Migrations.unlock();
   await Migrations.migrateTo('latest');
   test.equal(run, ['u1', 'u2']);
   test.equal(await Migrations.getVersion(), 2);
 });
 
-Tinytest.addAsync('Does nothing for no migrations.', async function(test) {
+Tinytest.addAsync('Does nothing for no migrations.', async function (test) {
   await Migrations._reset();
 
-  // shouldnt do anything
+  // Shouldn't do anything
   await Migrations.migrateTo('latest');
   test.equal(await Migrations.getVersion(), 0);
 });
 
-Tinytest.addAsync('Checks that rerun works correctly', async function(test) {
-  const run = []; //keeps track of migrations in here
+Tinytest.addAsync('Checks that rerun works correctly with async migrations.', async function (test) {
+  const run = []; // Keeps track of migrations
   await Migrations._reset();
 
-  // add the migrations
+  // Add migration
   Migrations.add({
     version: 1,
-    up: function() {
+    up: async function () {
       run.push('u1');
     },
   });
@@ -242,152 +249,141 @@ Tinytest.addAsync('Checks that rerun works correctly', async function(test) {
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 
-  // shouldn't migrate
+  // Shouldn't migrate
   await Migrations.migrateTo(1);
   test.equal(run, ['u1']);
   test.equal(await Migrations.getVersion(), 1);
 
-  // should migrate again
+  // Should migrate again with rerun
   await Migrations.migrateTo('1,rerun');
   test.equal(run, ['u1', 'u1']);
   test.equal(await Migrations.getVersion(), 1);
 });
 
-Tinytest.addAsync(
-  'Checks that rerun works even if there are missing versions',
-  async function(test) {
-    const run = []; //keeps track of migrations in here
-    await Migrations._reset();
-
-    // add the migration with a missing step
-    Migrations.add({
-      version: 3,
-      up: function() {
-        run.push('u1');
-      },
-    });
-
-    await Migrations.migrateTo('latest');
-    test.equal(run, ['u1']);
-    test.equal(await Migrations.getVersion(), 3);
-
-    // shouldn't migrate
-    await Migrations.migrateTo(3);
-    test.equal(run, ['u1']);
-    test.equal(await Migrations.getVersion(), 3);
-
-    // should migrate again
-    await Migrations.migrateTo('3,rerun');
-    test.equal(run, ['u1', 'u1']);
-    test.equal(await Migrations.getVersion(), 3);
-  },
-);
-
-Tinytest.addAsync(
-  'Migration callbacks include the migration as an argument',
-  async function(test) {
-    let contextArg;
-    await Migrations._reset();
-
-    // add the migrations
-    const migration = {
-      version: 1,
-      up: function(m) {
-        contextArg = m;
-      },
-    };
-    Migrations.add(migration);
-
-    await Migrations.migrateTo(1);
-    test.equal(contextArg === migration, true);
-  },
-);
-
-Tinytest.addAsync('Migrations can log to injected logger', async function(
-  test,
-  done,
-) {
+Tinytest.addAsync('Checks that rerun works even if there are missing versions.', async function (test) {
+  const run = []; // Keeps track of migrations
   await Migrations._reset();
 
-  // Ensure this logging code only runs once. More than once and we get
-  // Tinytest errors that the test "returned multiple times", or "Trace: event
-  // after complete!". Give me a ping, Vasili. One ping only, please.
+  // Add migration with a missing step
+  Migrations.add({
+    version: 3,
+    up: async function () {
+      run.push('u1');
+    },
+  });
+
+  await Migrations.migrateTo('latest');
+  test.equal(run, ['u1']);
+  test.equal(await Migrations.getVersion(), 3);
+
+  // Shouldn't migrate
+  await Migrations.migrateTo(3);
+  test.equal(run, ['u1']);
+  test.equal(await Migrations.getVersion(), 3);
+
+  // Should migrate again with rerun
+  await Migrations.migrateTo('3,rerun');
+  test.equal(run, ['u1', 'u1']);
+  test.equal(await Migrations.getVersion(), 3);
+});
+
+Tinytest.addAsync('Migration callbacks include the migration as an argument.', async function (test) {
+  let contextArg;
+  await Migrations._reset();
+
+  // Add migration
+  const migration = {
+    version: 1,
+    up: async function (m) {
+      contextArg = m;
+    },
+  };
+  Migrations.add(migration);
+
+  await Migrations.migrateTo(1);
+  test.equal(contextArg === migration, true);
+});
+
+Tinytest.addAsync('Migrations can log to injected logger.', async function (test) {
+  await Migrations._reset();
+
   let calledDone = false;
-  Migrations.options.logger = function() {
+  Migrations.options.logger = function () {
     if (!calledDone) {
       calledDone = true;
       test.isTrue(true);
-      done();
     }
   };
 
-  Migrations.add({ version: 1, up: function() {} });
+  Migrations.add({ version: 1, up: async function () {} });
   await Migrations.migrateTo(1);
 
   Migrations.options.logger = null;
 });
 
-Tinytest.addAsync(
-  'Migrations should pass correct arguments to logger',
-  async function(test, done) {
-    await Migrations._reset();
-
-    // Ensure this logging code only runs once. More than once and we get
-    // Tinytest errors that the test "returned multiple times", or "Trace: event
-    // after complete!". Give me a ping, Vasili. One ping only, please.
-    let calledDone = false;
-    const logger = function(opts) {
-      if (!calledDone) {
-        calledDone = true;
-        test.include(opts, 'level');
-        test.include(opts, 'message');
-        test.include(opts, 'tag');
-        test.equal(opts.tag, 'Migrations');
-        done();
-      }
-    };
-
-    Migrations.options.logger = logger;
-
-    Migrations.add({ version: 1, up: function() {} });
-    await Migrations.migrateTo(1);
-
-    Migrations.options.logger = null;
-  },
-);
-
-Tinytest.addAsync('Async migrations', async function(test) {
+Tinytest.addAsync('Migrations should pass correct arguments to logger.', async function (test) {
   await Migrations._reset();
-  let num = 10
+
+  let calledDone = false;
+  const logger = function (opts) {
+    if (!calledDone) {
+      calledDone = true;
+      test.include(opts, 'level');
+      test.include(opts, 'message');
+      test.include(opts, 'tag');
+      test.equal(opts.tag, 'Migrations');
+    }
+  };
+
+  Migrations.options.logger = logger;
+
+  Migrations.add({ version: 1, up: async function () {} });
+  await Migrations.migrateTo(1);
+
+  Migrations.options.logger = null;
+});
+
+Tinytest.addAsync('Async migrations execute in order.', async function (test) {
+  await Migrations._reset();
+  const run = [];
 
   Migrations.add({
     version: 1,
-    up: async function() {
-      num = 20
+    up: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      run.push('u1');
     },
-    down: async function () {
-      num = 10
-    }
   });
 
-  await Migrations.migrateTo(1);
-  test.equal(num, 20)
+  Migrations.add({
+    version: 2,
+    up: async function () {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      run.push('u2');
+    },
+  });
 
-  await Migrations.migrateTo(0);
-  test.equal(num, 10)
-})
+  Migrations.add({
+    version: 3,
+    up: async function () {
+      run.push('u3');
+    },
+  });
 
-// Tinytest.addAsync('Fail migration when not a function', async function(test) {
-//   await Migrations._reset();
-//
-//   Migrations.add({
-//     version: 1,
-//     name: 'Failure of a migration',
-//     up: 'this should fail'
-//   });
-//
-//   test.throwsAsync(async function() {
-//     await Migrations.migrateTo('latest');
-//   }, /Migration must supply an up function/);
-//
-// })
+  await Migrations.migrateTo('latest');
+  test.equal(run, ['u1', 'u2', 'u3']);
+});
+
+Tinytest.addAsync('Fails migration when up is not a function.', async function (test) {
+  await Migrations._reset();
+
+  await test.throwsAsync(async function () {
+    Migrations.add({
+      version: 1,
+      name: 'Failure of a migration',
+      up: 'this should fail',
+    });
+
+    await Migrations.migrateTo('latest');
+  }, /Migration must supply an up function/);
+});
