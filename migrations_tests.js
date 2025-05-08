@@ -377,13 +377,13 @@ Tinytest.addAsync('Async migrations execute in order.', async function (test) {
 Tinytest.addAsync('Fails migration when up is not a function.', async function (test) {
   await Migrations._reset();
 
-  Migrations.add({
-    version: 1,
-    name: 'Failure of a migration',
-    up: 'this should fail',
-  });
-
   await test.throwsAsync(async function () {
+    Migrations.add({
+      version: 1,
+      name: 'Failure of a migration',
+      up: 'this should fail',
+    });
+
     await Migrations.migrateTo('latest');
   }, /Migration must supply an up function/);
 });
